@@ -56,7 +56,7 @@ def surface_id(file_smb):
     idx_water = np.where(sample_data == -998.)
     idx_unknown = np.where(sample_data == -996.)
 
-    stacked_filled_sel_data = sel_data.stack(i=('y', 'x'), z=('cos_sza', 'vza', 'raz'))
+    stacked_filled_sel_data = sel_data.stack(i=('y', 'x'), z=('sza', 'vza', 'raz'))
     input_data = stacked_filled_sel_data.values
 
     print("[surfaceID.py] kMeans input data is in shape of {}".format(input_data.shape))
@@ -128,7 +128,7 @@ def surface_id(file_smb):
     MAIA_lons = DS.Longitude
     sfcID_folder = config.get('general', 'SfcID_folder')
 
-    sfcID_file = os.path.join(sfcID_folder, file_smb.replace("maxBRF", "surfaceID"))
+    sfcID_file = os.path.join(sfcID_folder, file_smb.split('/')[-1].replace("maxBRF", "surfaceID"))
     MAIA_lats.to_netcdf(sfcID_file, 'w')
     MAIA_lons.to_netcdf(sfcID_file, 'a')
     MAIA_labels = xr.DataArray(labels_sorted, name='surface_ID',
