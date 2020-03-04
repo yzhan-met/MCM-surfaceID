@@ -47,7 +47,7 @@ def surface_id(file_smb):
 
     # select data
     print("[surfaceID.py] select smb subsets for clustering")
-    sel_data = DS.max_BRF.sel(cos_sza=sel_cos_sza,
+    sel_data = DS.max_BRF.sel(sza=sel_cos_sza,
                               vza=sel_vza,
                               raz=sel_raz)
     filled_sel_data = sel_data.fillna(-996.)
