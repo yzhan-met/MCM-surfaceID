@@ -1,0 +1,8 @@
+# yizhe added
+*.png
+*.npz
+.idea/
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+/.ipynb_checkpoints/
