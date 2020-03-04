@@ -82,6 +82,7 @@ def pix_max_BRF(DoY):
     """
 
     # load settings from config.txt file
+    print("[pixMaxBRF.py] load settings from config.txt file")
     config = configparser.ConfigParser()
     config.read_file(open('etc/config.txt'))
 
@@ -91,9 +92,11 @@ def pix_max_BRF(DoY):
     sza = np.rad2deg(np.arccos(cos_sza))
 
     # calculate ROSS-LI kernels
+    print("[pixMaxBRF.py] calculate ROSS-LI kernels")
     ROSS_kernels, LI_kernels = kernels_MAIA(sza, vza, raz)
 
     # open MAIA GEOP dataset for the PTA
+    print("[pixMaxBRF.py] open MAIA GEOP dataset for the PTA")
     GEOP_file = config.get('general', 'GEOP_file')
     DS = xr.open_dataset(GEOP_file)
     lat = DS.Latitude  # (1000, 1000)
@@ -101,6 +104,7 @@ def pix_max_BRF(DoY):
     lw_mask = DS.Landwater_mask
 
     # open MAIAC dataset for the PTA at the DOY
+    print("[pixMaxBRF.py] open MAIAC dataset for the PTA at the DOY")
     MAIAC_folder = config.get('general', 'MAIAC_folder')
     PTA = config.get('general', 'PTA')
     path_MAIAC = os.path.join(MAIAC_folder, "MAIA_BRDF_{0}_*{1}.hdf".format(PTA, str(DoY).zfill(3)))
@@ -137,6 +141,7 @@ def pix_max_BRF(DoY):
     target_coastal = np.ones((num_SZA, num_VZA, num_RAZ)) * -997.
 
     # line loop
+    print("[pixMaxBRF.py] start main loop")
     for i in tqdm(range(num_y)):
         # grid loop
         for j in range(num_x):
@@ -157,7 +162,7 @@ def pix_max_BRF(DoY):
                 # (same as coeff_vol and coeff_geo)
                 invalid_yrs = np.sum(xr.ufuncs.isnan(k_iso[:, i, j]))
                 # do not retrieve BRFs if the number of invalid years is greater than max_invalid_yrs
-                max_invalid_yrs = config.get('mainLoop', 'max_invalid_yrs')
+                max_invalid_yrs = config.getint('mainLoop', 'max_invalid_yrs')
                 if invalid_yrs > max_invalid_yrs:
                     # print("sorry to see but there ({}, {}) at DoY-{} is bad...".format(i, j, DoY))
                     target_max_brf[i, j] = target_filled
@@ -172,6 +177,7 @@ def pix_max_BRF(DoY):
 
     # save results
     # convert result array to xarray
+    print("[pixMaxBRF.py] convert result array to xarray")
     target_max_brf = xr.DataArray(target_max_brf, name='max_BRF',
                                   coords=[('y', np.arange(num_y)),
                                           ('x', np.arange(num_x)),
@@ -179,6 +185,7 @@ def pix_max_BRF(DoY):
     target_max_brf.encoding['_FillValue'] = -999.
 
     # save xarray to nc
+    print("[pixMaxBRF.py] save xarray to nc")
     SMB_folder = config.get('general', 'SMB_folder')
     smb_file = os.path.join(SMB_folder, 'maxBRF_{}_{}.nc'.format(PTA, str(DoY).zfill(3)))
     target_max_brf.to_netcdf(smb_file, 'w')
