@@ -1,4 +1,5 @@
 [general]
+PTA = LA
 GEOP_file = /data/keeling/a/yizhe/c/MAIA/LA_PTA_1KM.nc
 MAIAC_folder = /data/keeling/a/yizhe/c/MAIA/MAIAC/LA
 

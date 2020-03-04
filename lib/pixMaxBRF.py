@@ -12,6 +12,7 @@ Noted on Oct 28, 2019
 Save output in hdf5 format will reduce 50% of the output size but cost more time in reading it.
 """
 
+import os
 import numpy as np
 import xarray as xr
 import configparser
@@ -71,12 +72,11 @@ def kernels_MAIA(SZA, VZA, RAZ):
 
 
 # ----------------Main function---------------
-def pix_max_BRF(PTA, DoY):
+def pix_max_BRF(DoY):
     """
-    retrieve the maximum BRF for a particular PTA @ a particular DoY and save the results to
-    a netcdf file.
+    retrieve the maximum BRF for a particular PTA (defined in config.txt file) @ a particular DoY and
+    save the results to a netcdf file.
 
-    :param PTA: name of the Primary Target Area
     :param DoY: day of year
     :return:
     """
@@ -90,23 +90,27 @@ def pix_max_BRF(PTA, DoY):
     raz = [float(i) for i in config.get('sunViewGeometry', 'raz').split(',')]
     sza = np.rad2deg(np.arccos(cos_sza))
 
+    # calculate ROSS-LI kernels
     ROSS_kernels, LI_kernels = kernels_MAIA(sza, vza, raz)
-    print(ROSS_kernels.shape, LI_kernels.shape)
-    # # Open MAIA GEOP dataset for the PTA
-    # path_GEOP = "MAIA/{}_PTA_1KM.nc".format(PTA)
-    # DS = xr.open_dataset(path_GEOP)
-    # lat = DS.Latitude  # (1000, 1000)
-    # lon = DS.Longitude
-    # lw_mask = DS.Landwater_mask
-    #
-    # # Open MAIAC dataset for the PTA at the DOY
-    # path_MAIAC = "MAIAC/{0}/MAIA_BRDF_{0}_*{1}.hdf".format(PTA, str(DoY).zfill(3))
-    # DSS = xr.open_mfdataset(path_MAIAC, concat_dim='yr')
-    #
-    # k_iso = DSS.Kiso[:, 0, :, :].values  # (15, 1000, 1000)
-    # k_vol = DSS.Kvol[:, 0, :, :].values
-    # k_geo = DSS.Kgeo[:, 0, :, :].values
-    #
+
+    # open MAIA GEOP dataset for the PTA
+    GEOP_file = config.get('general', 'GEOP_file')
+    DS = xr.open_dataset(GEOP_file)
+    lat = DS.Latitude  # (1000, 1000)
+    lon = DS.Longitude
+    lw_mask = DS.Landwater_mask
+
+    # open MAIAC dataset for the PTA at the DOY
+    MAIAC_folder = config.get('general', 'MAIAC_folder')
+    PTA = config.get('general', 'PTA_name')
+    path_MAIAC = os.path.join(MAIAC_folder, "MAIA_BRDF_{0}_*{1}.hdf".format(PTA, str(DoY).zfill(3)))
+    DSS = xr.open_mfdataset(path_MAIAC, concat_dim='yr')
+
+    print(DSS.Kiso)
+    k_iso = DSS.Kiso[:, 0, :, :].values  # (15, 1000, 1000)
+    k_vol = DSS.Kvol[:, 0, :, :].values
+    k_geo = DSS.Kgeo[:, 0, :, :].values
+
     # # ============quality control============
     # # all invalid values are set to np.nan so that no target_max_brf will be calculated
     #
