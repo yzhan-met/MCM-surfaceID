@@ -32,13 +32,15 @@ def surface_id(file_smb):
     print("[surfaceID.py] load intermediate smb file for the PTA")
     DS = xr.open_mfdataset(file_smb)
     target_max_BRF = DS.max_BRF.values
+    MAIA_lats = DS.Latitude
+    MAIA_lons = DS.Longitude
 
     # there is also a placeholder to assign other MAIA water types to -9999.
-    print("[surfaceID.py] load MAIA GEOP dataset for the PTA")
-    MAIA_PTA_ancillary = xr.open_dataset('../etc/LA_PTA_1KM.nc')
+    # print("[surfaceID.py] load MAIA GEOP dataset for the PTA")
+    # MAIA_PTA_ancillary = xr.open_dataset('../etc/LA_PTA_1KM.nc')
     # MAIA_water_types = MAIA_PTA_ancillary.Landwater_mask.values
-    MAIA_lats = MAIA_PTA_ancillary.Latitude
-    MAIA_lons = MAIA_PTA_ancillary.Longitude
+    # MAIA_lats = MAIA_PTA_ancillary.Latitude
+    # MAIA_lons = MAIA_PTA_ancillary.Longitude
 
     # init k-means clustering
     n_clusters = config.getint('kMeans', 'n_cluster')  # including water category, which is always 0
