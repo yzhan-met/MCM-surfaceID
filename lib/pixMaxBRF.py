@@ -88,22 +88,10 @@ def pix_max_BRF(PTA, DoY):
     cos_sza = [float(i) for i in config.get('sunViewGeometry', 'cos_sza').split(',')]
     vza = [float(i) for i in config.get('sunViewGeometry', 'vza').split(',')]
     raz = [float(i) for i in config.get('sunViewGeometry', 'raz').split(',')]
+    sza = np.rad2deg(np.arccos(cos_sza))
 
-    print(cos_sza)
-    # # Get RTLS kernels, once for all
-    # # change sun-view configurations here when necessary
-    # # --------
-    # # Current settings:
-    # # cos(SZA): 0.05, 0.15, 0.25, 0.35, 0.45, 0.55, 0.65, 0.75, 0.85, 0.95
-    # # correspond to SZA: 87.1, 81.4, 75.5, 69.5, 63.3, 56.6, 49.5, 41.4, 31.8, 18.2 (degree)
-    # # VZA: 2.5, 7.5, 12.5, 17.5, 22.5, 27.5, 32.5, 37.5, 42.5, 47.5, 52.5, 57.5, 62.5, 67.5, 72.5 (degree)
-    # # RAZ: 7.5, 22.5, 37.5, 52.5, 67.5, 82.5, 97.5, 112.5, 127.5, 142.5, 157.5, 172.5 (degree)
-    # cos_sza = 0.05 + np.arange(10.) / 10.
-    # SZA = np.rad2deg(np.arccos(cos_sza))
-    # VZA = np.arange(0, 73, 5) + 2.5
-    # RAZ = np.arange(0, 180, 15) + 7.5
-    # ROSS_kernels, LI_kernels = kernels_MAIA(SZA, VZA, RAZ)
-    #
+    ROSS_kernels, LI_kernels = kernels_MAIA(sza, vza, raz)
+    print(ROSS_kernels.shape, LI_kernels.shape)
     # # Open MAIA GEOP dataset for the PTA
     # path_GEOP = "MAIA/{}_PTA_1KM.nc".format(PTA)
     # DS = xr.open_dataset(path_GEOP)
