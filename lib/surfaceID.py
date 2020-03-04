@@ -31,9 +31,6 @@ def surface_id(file_smb):
     # remember to change NaN values to -9999. before running K-means clustering
     print("[surfaceID.py] load intermediate smb file for the PTA")
     DS = xr.open_mfdataset(file_smb)
-    target_max_BRF = DS.max_BRF.values
-    MAIA_lats = DS.Latitude
-    MAIA_lons = DS.Longitude
 
     # there is also a placeholder to assign other MAIA water types to -9999.
     # print("[surfaceID.py] load MAIA GEOP dataset for the PTA")
@@ -44,22 +41,30 @@ def surface_id(file_smb):
 
     # init k-means clustering
     n_clusters = config.getint('kMeans', 'n_cluster')  # including water category, which is always 0
-    idx_sza_vza_raz = config.get('kMeans', 'idx_sza_vza_raz').split('/')
+    sel_cos_sza = [float(i) for i in config.get('kMeans', 'sel_cos_sza')]
+    sel_vza = [float(i) for i in config.get('kMeans', 'sel_vza')]
+    sel_raz = [float(i) for i in config.get('kMeans', 'sel_raz')]
+
     # select data
     print("[surfaceID.py] select smb subsets for clustering")
-    sel_data = []
-    for idx in idx_sza_vza_raz:
-        idx_sza = int(idx.split('.')[0])
-        idx_vza = int(idx.split('.')[1])
-        idx_raz = int(idx.split('.')[2])
-        sel_data.append(target_max_BRF[:, :, idx_sza, idx_vza, idx_raz])
+    sel_data = DS.max_BRF.sel(cos_sza=sel_cos_sza,
+                              vza=sel_vza,
+                              raz=sel_raz)
+    filled_sel_data = sel_data.fillna(-996.)
 
-    sel_data = np.array(sel_data)
-    input_data = sel_data.reshape(len(idx_sza_vza_raz), -1).transpose()
+    sample_data = filled_sel_data[:, :, 0, 0, 0]
+    idx_coastal = np.where(sample_data == -997.)
+    idx_water = np.where(sample_data == -998.)
+    idx_unknown = np.where(sample_data == -996.)
+
+    stacked_filled_sel_data = sel_data.stack(i=('y', 'x'), z=('cos_sza', 'vza', 'raz'))
+    input_data = stacked_filled_sel_data.values
+
     print("[surfaceID.py] kMeans input data is in shape of {}".format(input_data.shape))
 
     # whiten data -- equivalent to using sklearn.preprocessing.StandardScaler
     print("[surfaceID.py] whiten kMeans input data")
+    np.place(input_data, input_data < -900., np.nan)
     input_data_mean = np.nanmean(input_data, axis=0)
     input_data_std = np.nanstd(input_data, axis=0)
     whitened_data = (input_data - input_data_mean) / input_data_std
@@ -78,45 +83,51 @@ def surface_id(file_smb):
     labels_unsorted = minibatch_kmeans.labels_.reshape(1000, 1000)
 
     # sort labels
-    print("[surfaceID.py] sort kMeans surface IDs by mean max-BRF")
-    grid_mean_BRF = np.nanmean(sel_data, axis=0)
+    print("[surfaceID.py] sort kMeans surface IDs by grid mean BRF")
 
-    cluster_mean_BRF = []
-    cluster_tot_num = []
+    # calculate grid_mean_BRF
+    grid_mean_BRF = stacked_filled_sel_data.unstack('i').mean(axis=0).values
+
+    # use grid_mean_BRF to get cluster_mean_BRF_unsorted
+    cluster_mean_BRF_unsorted = []
     for icluster in np.arange(n_clusters):
         _cluster_BRF = grid_mean_BRF[labels_unsorted == icluster]
-        cluster_tot_num.append(len(_cluster_BRF))
-        cluster_mean_BRF.append(np.nanmean(_cluster_BRF))
-        print(icluster, len(_cluster_BRF), np.nanmean(_cluster_BRF))
+        cluster_mean_BRF_unsorted.append(np.nanmean(_cluster_BRF))
 
-    # find the cluster whose cluster_mean_BRF is NaN, change the label to 100 and remove it
-    unsorted_clusters = np.dstack([range(n_clusters), cluster_mean_BRF])[0]
-    # find it
-    nan_cluster = np.arange(n_clusters)[xr.ufuncs.isnan(unsorted_clusters)[:, 1]][0]
-    # remove it
-    unsorted_clusters_without_nan = np.delete(unsorted_clusters, nan_cluster, axis=0)
+    # get labels_sorted based on cluster_mean_BRF_unsorted (small to large)
+    # assign a number to each cluster_mean_BRF
+    clusters_unsorted = np.dstack([range(n_clusters), cluster_mean_BRF_unsorted])[0]
     # sort the rest
-    sorted_clusters_without_nan = np.array(sorted(unsorted_clusters_without_nan, key=lambda x: x[1]))[:, 0]
+    clusters_sorted = np.array(sorted(clusters_unsorted, key=lambda x: x[1]))[:, 0]
     # sort labels (0--n_clusters where category 0 is for unconsidered points)
     labels_sorted = labels_unsorted.copy()
-    np.place(labels_sorted, labels_sorted == nan_cluster, 100)
-    for i, j in enumerate(sorted_clusters_without_nan):
-        np.place(labels_sorted, labels_sorted == j, 101 + i)
+    for i, j in enumerate(clusters_sorted):
+        np.place(labels_sorted, labels_unsorted == j, 101 + i)
     labels_sorted -= 100
+    # assign fill-in labels
+    labels_sorted[idx_water] = 0
+    labels_sorted[idx_coastal] = 1
+    labels_sorted[idx_unknown] = 1
 
-    # calculate category-wise BRDF stats (max&min&mean)
-    ncats = np.arange(1, n_clusters)
-    cat_BRDF_stats = []
-    for icat in ncats:
-        idx_cat = np.where(labels_sorted == icat)
-        cat_BRDF_stats.append(np.max(target_max_BRF[idx_cat], axis=0))
-        # cat_BRDF_stats.append(np.min(target_max_BRF[idx_cat], axis=0))
-        # cat_BRDF_stats.append(np.mean(target_max_BRF[idx_cat], axis=0))
-        # cat_BRDF_stats.append(np.std(target_max_BRF[idx_cat], axis=0))
+    sorted_cluster_std_BRF = []
+    sorted_cluster_mean_BRF = []
+    sorted_cluster_tot_num = []
+
+    # plus 1 because adding water type (0)
+    for icluster in np.arange(n_clusters + 1):
+        _cluster_BRF = grid_mean_BRF[labels_sorted == icluster]
+
+        sorted_cluster_mean_BRF.append(np.nanmean(_cluster_BRF))
+        sorted_cluster_std_BRF.append(np.nanstd(_cluster_BRF))
+        sorted_cluster_tot_num.append(len(_cluster_BRF))
+        print("{:2d} {:6d} {:.2f} {:.2f}".format(icluster, sorted_cluster_tot_num[icluster],
+                                           sorted_cluster_mean_BRF[icluster], sorted_cluster_std_BRF[icluster]))
 
     # ===========save labels===========
     print("[surfaceID.py] write sorted surface IDs to netcdf")
-    sfcID_folder = config.getint('general', 'SfcID_folder')
+    MAIA_lats = DS.Latitude
+    MAIA_lons = DS.Longitude
+    sfcID_folder = config.get('general', 'SfcID_folder')
 
     sfcID_file = os.path.join(sfcID_folder, file_smb.replace("maxBRF", "surfaceID"))
     MAIA_lats.to_netcdf(sfcID_file, 'w')
