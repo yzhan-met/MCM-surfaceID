@@ -41,9 +41,9 @@ def surface_id(file_smb):
 
     # init k-means clustering
     n_clusters = config.getint('kMeans', 'n_cluster')  # including water category, which is always 0
-    sel_cos_sza = [float(i) for i in config.get('kMeans', 'sel_cos_sza')]
-    sel_vza = [float(i) for i in config.get('kMeans', 'sel_vza')]
-    sel_raz = [float(i) for i in config.get('kMeans', 'sel_raz')]
+    sel_cos_sza = [float(i) for i in config.get('kMeans', 'sel_cos_sza').split(',')]
+    sel_vza = [float(i) for i in config.get('kMeans', 'sel_vza').split(',')]
+    sel_raz = [float(i) for i in config.get('kMeans', 'sel_raz').split(',')]
 
     # select data
     print("[surfaceID.py] select smb subsets for clustering")
