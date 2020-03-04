@@ -2,10 +2,12 @@
 PTA = LA
 GEOP_file = /data/keeling/a/yizhe/c/MAIA/LA_PTA_1KM.nc
 MAIAC_folder = /data/keeling/a/yizhe/c/MAIA/MAIAC/LA
+SMB_folder = /data/keeling/a/yizhe/c/MAIA/SMB/LA
 
 [sunViewGeometry]
 cos_sza = 0.05, 0.15, 0.25, 0.35, 0.45, 0.55, 0.65, 0.75, 0.85, 0.95
 vza = 2.5, 7.5, 12.5, 17.5, 22.5, 27.5, 32.5, 37.5, 42.5, 47.5, 52.5, 57.5, 62.5, 67.5, 72.5
 raz = 7.5, 22.5, 37.5, 52.5, 67.5, 82.5, 97.5, 112.5, 127.5, 142.5, 157.5, 172.5
 
-
+[mainLoop]
+max_invalid_yrs = 5
