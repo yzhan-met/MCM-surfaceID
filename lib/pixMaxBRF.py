@@ -96,7 +96,7 @@ def pix_max_BRF(DoY):
     ROSS_kernels, LI_kernels = kernels_MAIA(sza, vza, raz)
 
     # open MAIA GEOP dataset for the PTA
-    print("[pixMaxBRF.py] open MAIA GEOP dataset for the PTA")
+    print("[pixMaxBRF.py] load MAIA GEOP dataset for the PTA")
     GEOP_file = config.get('general', 'GEOP_file')
     DS = xr.open_dataset(GEOP_file)
     lat = DS.Latitude  # (1000, 1000)
@@ -104,7 +104,7 @@ def pix_max_BRF(DoY):
     lw_mask = DS.Landwater_mask
 
     # open MAIAC dataset for the PTA at the DOY
-    print("[pixMaxBRF.py] open MAIAC dataset for the PTA at the DOY")
+    print("[pixMaxBRF.py] load MAIAC dataset for the PTA at the DOY")
     MAIAC_folder = config.get('general', 'MAIAC_folder')
     PTA = config.get('general', 'PTA')
     path_MAIAC = os.path.join(MAIAC_folder, "MAIA_BRDF_{0}_*{1}.hdf".format(PTA, str(DoY).zfill(3)))
@@ -162,7 +162,7 @@ def pix_max_BRF(DoY):
                 # (same as coeff_vol and coeff_geo)
                 invalid_yrs = np.sum(xr.ufuncs.isnan(k_iso[:, i, j]))
                 # do not retrieve BRFs if the number of invalid years is greater than max_invalid_yrs
-                max_invalid_yrs = config.getint('mainLoop', 'max_invalid_yrs')
+                max_invalid_yrs = config.getint('smb', 'max_invalid_yrs')
                 if invalid_yrs > max_invalid_yrs:
                     # print("sorry to see but there ({}, {}) at DoY-{} is bad...".format(i, j, DoY))
                     target_max_brf[i, j] = target_filled
