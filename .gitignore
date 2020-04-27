@@ -2,7 +2,7 @@
 *.png
 *.npz
 .idea/
-
+*slurm*
 # Byte-compiled / optimized / DLL files
 __pycache__/
 /.ipynb_checkpoints/

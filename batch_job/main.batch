@@ -1,0 +1,13 @@
+#!/bin/bash
+#SBATCH --job-name='SFC_ID'
+#SBATCH -p sesebig
+#SBATCH --time=02:00:00
+#SBATCH --mem-per-cpu=72gb
+#SBATCH -n 2
+#SBATCH --mail-type=FAIL
+#SBATCH --mail-type=END
+#SBATCH --mail-user=vllgsbr2@illinois.edu
+#SBATCH --error='slurm_main.err'
+
+cd /data/keeling/a/vllgsbr2/c/MAIA_sfc_ID_dev/MCM-surfaceID
+python main.py
